@@ -1,0 +1,57 @@
+<html>
+<head>
+<meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+<title>Not Star Fox</title>
+
+<link rel="stylesheet" href="../libs/jquery-ui/jquery-ui.css" />
+<link rel="stylesheet" href="css/main.css" />
+
+<script src="../libs/jquery-3.3.1/jquery-3.3.1.js"></script>
+<script src="../libs/jquery-ui/jquery-ui.js"></script>
+
+<script src="../libs/three.js/three.js"></script>
+<script src="../libs/three.js/controls/OrbitControls.js"></script>
+
+<script src="../libs/three.js/loaders/inflate.min.js"></script>
+<script src="../libs/three.js/loaders/OBJLoader.js"></script>
+<script src="js/MTLLoader.js"></script>
+
+<script src="../libs/tween.js/tween.js"></script>
+<script src="../libs/keyframe.js/keyframe.js"></script>
+
+<script src="js/notstarfox.js"></script>
+<script src="js/control.js"></script>
+
+<script type="text/javascript">
+  
+	$(document).ready(
+			function() {
+				var canvas = document.getElementById("webglcanvas");
+				// create the scene
+				createScene(canvas);
+				// initialize controls
+				initControls();
+		        // Run the run loop
+		        run();
+			}
+	);
+
+</script>
+
+</head>
+<body>
+    <div id="container">
+        <canvas id="webglcanvas"></canvas>
+	</div>
+	<div class='game_loader'>
+		<div class='game_loader__inner'>
+			<button class="btn start" 
+					id="start">Start Game
+			</button>
+		</div>
+	</div>
+	<div class="game_controls">
+		<div id="timer">Timer: 30</div>
+		<div id="score">Score: 0</div>
+	</div>
+</html>
