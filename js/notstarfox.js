@@ -8,14 +8,14 @@ root = null,
 spaceShip = null,
 group = null;
 
-// Flags to determine which direction the player is moving
+// Flags to determine which direction the space ship is moving
 var moveUp = false;
 var moveDown = false;
 var moveLeft = false;
 var moveRight = false;
-// Velocity vector for the player
+// Velocity vector for the space ship
 var playerVelocity = new THREE.Vector3();
-// How fast the player will move
+// How fast the space ship will move
 var PLAYERSPEED = 800.0;
 
 var objLoader = null,
@@ -97,8 +97,8 @@ function createScene(canvas) {
     root = new THREE.Object3D;
     
     spotLight = new THREE.SpotLight (0xffffff);
-    spotLight.position.set(0, 40, -10);
-    spotLight.target.position.set(-2, 0, -2);
+    spotLight.position.set(0, 20, -10);
+    spotLight.target.position.set(0, 30, 90);
     root.add(spotLight);
 
     spotLight.castShadow = true;
@@ -171,6 +171,7 @@ function loadObj() {
                     spaceShip.rotation.y = -Math.PI;
                     group.add(spaceShip);
                 },
+                // called when is loading
                 function ( xhr ) {
                     console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
                 },
