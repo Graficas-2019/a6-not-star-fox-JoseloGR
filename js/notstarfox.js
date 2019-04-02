@@ -21,7 +21,8 @@ var PLAYERSPEED = 800.0;
 var objLoader = null,
 mtlLoader = null;
 
-var robots = [];
+var rock = null;
+var rocks = [];
 var currentTime = Date.now();
 var clock = null;
 var bullets = [];
@@ -33,7 +34,6 @@ loopAnimation = false;
 var directionalLight = null;
 var spotLight = null;
 var ambientLight = null;
-var mapUrl = "images/checker_large.gif";
 var SHADOW_MAP_WIDTH = 2048, SHADOW_MAP_HEIGHT = 2048;
 
 function startGame() {
@@ -47,17 +47,20 @@ function animate() {
     if (isGameRunning) {
         var now = Date.now();
         var deltat = now - currentTime;
-        var delta = clock.getDelta() * 1000;
         currentTime = now;
-        var seconds = parseInt(30 - clock.elapsedTime);
+        var seconds = parseInt(120 - clock.elapsedTime);
         console.log(seconds);
-
         KF.update();
+
+        if(seconds > 100 && seconds < 120 ||
+            seconds > 60 && seconds < 80 ||
+            seconds > 20 && seconds < 40) {
+          cloneRock();
+        }
 
         // Get the change in time between frames
         var delta = clock.getDelta();
         animatePlayer(delta);
-
 
         for (var index=0; index<bullets.length; index++) {
           if (bullets[index] === undefined ) continue;
@@ -67,6 +70,14 @@ function animate() {
           }
           bullets[index].position.add(bullets[index].velocity);
         }
+
+        for (rock_i of rocks){
+          rock_i.position.z += 2;
+          if (rock_i.position.z >= 100){
+              scene.remove(rock_i);
+          }
+        }
+
     }
 }
 
@@ -76,7 +87,7 @@ function run() {
     // Render the scene
     renderer.render( scene, camera );
 
-    // Spin the cube for next frame
+    // Animate for next frame
     animate();
 }
 
@@ -109,8 +120,8 @@ function createScene(canvas) {
     root = new THREE.Object3D;
 
     spotLight = new THREE.SpotLight (0xffffff);
-    spotLight.position.set(0, 20, -10);
-    spotLight.target.position.set(0, 30, 90);
+    spotLight.position.set(0, 60, 100);
+    spotLight.target.position.set(0, 50, 60);
     root.add(spotLight);
 
     spotLight.castShadow = true;
@@ -124,37 +135,21 @@ function createScene(canvas) {
     root.add(ambientLight);
 
     // Create the objects
-    loadObj();
+    loadSpaceShip();
+
+    // Create obstacles
+    loadRock();
 
     // Create a group to hold the objects
     group = new THREE.Object3D;
     root.add(group);
-
-    // Create a texture map
-    var map = new THREE.TextureLoader().load(mapUrl);
-    map.wrapS = map.wrapT = THREE.RepeatWrapping;
-    map.repeat.set(8, 8);
-
-    var color = 0xffffff;
-
-    // Put in a ground plane to show off the lighting
-    geometry = new THREE.PlaneGeometry(200, 200, 50, 50);
-    var mesh = new THREE.Mesh(geometry, new THREE.MeshPhongMaterial({color:color, map:map, side:THREE.DoubleSide}));
-
-    mesh.rotation.x = -Math.PI / 2;
-    mesh.position.y = -4.02;
-
-    // Add the mesh to our group
-    group.add( mesh );
-    mesh.castShadow = false;
-    mesh.receiveShadow = true;
 
     // Now add the group to our scene
     scene.add( root );
 
 }
 
-function loadObj() {
+function loadSpaceShip() {
     if(!mtlLoader) {
         mtlLoader = new THREE.MTLLoader();
     }
@@ -193,6 +188,59 @@ function loadObj() {
                 });
         }
     )
+}
+
+function loadRock() {
+    if(!mtlLoader) {
+        mtlLoader = new THREE.MTLLoader();
+    }
+    mtlLoader.load(
+        'models/rock/Rock.mtl',
+        function(materials){
+            materials.preload();
+            if(!objLoader) {
+                objLoader = new THREE.OBJLoader();
+                objLoader.setMaterials(materials);
+            }
+            objLoader.load(
+                'models/rock/Rock.obj',
+                function(object) {
+                    var texture = new THREE.TextureLoader().load('models/rock/RockTexture.jpg');
+                    object.traverse( function ( child ) {
+                        if ( child instanceof THREE.Mesh ) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                            child.material.map = texture;
+                        }
+                    });
+
+                    rock = object;
+                    rock.scale.set(2.5, 2.5, 2.5);
+                    rock.position.set(0, 40, 0);
+                    rock.rotation.z = Math.PI * (Math.random() * (10 -5) +5);
+                    rock.rotation.y = -Math.PI;
+                    //group.add(rock);
+                },
+                // called when is loading
+                function ( xhr ) {
+                    console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+                },
+                // called when loading has errors
+                function ( error ) {
+                    console.log( 'An error happened' );
+                });
+        }
+    )
+}
+
+function cloneRock() {
+  var newRock = rock.clone();
+  newRock.position.set(
+    Math.random() * (100 - (-100)) + (-100),
+    Math.random() * (50 - (-50)) + (-50),
+    -Math.random() * (100 - (-100)) + (-100));
+  scene.add(newRock);
+  rocks.push(newRock);
 }
 
 function listenForPlayerMovement() {
@@ -239,8 +287,8 @@ function listenForPlayerMovement() {
 
 function animatePlayer(delta) {
     // Gradual slowdown
-    playerVelocity.x -= playerVelocity.x * 10.0 * delta;
-    playerVelocity.y -= playerVelocity.y * 10.0 * delta;
+    playerVelocity.x -= playerVelocity.x * 5.0 * delta;
+    playerVelocity.y -= playerVelocity.y * 5.0 * delta;
 
     if (moveUp) {
       playerVelocity.x -= PLAYERSPEED * delta;
@@ -268,7 +316,7 @@ function listenForShot(delta) {
     var onKeyDown = function(event) {
       switch (event.keyCode) {
           case 32: // spacebar
-            createBullet();
+            createBullet(delta);
             break;
       }
     };
@@ -276,7 +324,7 @@ function listenForShot(delta) {
     document.addEventListener('keydown', onKeyDown, false);
 }
 
-function createBullet() {
+function createBullet(delta) {
   var bullet = new THREE.Mesh(
     new THREE.SphereGeometry(0.2, 8, 8),
     new THREE.MeshBasicMaterial({color: 0xffffff})
@@ -287,15 +335,15 @@ function createBullet() {
     spaceShip.position.z
   )
   bullet.velocity = new THREE.Vector3(
-    Math.sin(spaceShip.position.y),
     0,
-    Math.cos(spaceShip.position.y)
+    0,
+    -0.5
   );
   bullet.alive = true;
   setTimeout(() => {
     bullet.alive = false;
     scene.remove(bullet);
-  }, 1000);
+  }, 3000);
   bullets.push(bullet);
   scene.add(bullet);
 }
