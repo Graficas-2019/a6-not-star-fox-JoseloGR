@@ -23,7 +23,7 @@
 <script src="js/control.js"></script>
 
 <script type="text/javascript">
-  
+
 	$(document).ready(
 			function() {
 				var canvas = document.getElementById("webglcanvas");
@@ -31,8 +31,8 @@
 				createScene(canvas);
 				// initialize controls
 				initControls();
-		        // Run the run loop
-		        run();
+		    // Run the run loop
+		    run();
 			}
 	);
 
@@ -40,18 +40,25 @@
 
 </head>
 <body>
-    <div id="container">
+  <div id="container">
         <canvas id="webglcanvas"></canvas>
 	</div>
 	<div class='game_loader'>
 		<div class='game_loader__inner'>
-			<button class="btn start" 
+			<button class="btn start"
 					id="start">Start Game
+			</button>
+      <button class="btn start"
+					id="restart">Restart Game
 			</button>
 		</div>
 	</div>
 	<div class="game_controls">
-		<div id="timer">Timer: 30</div>
-		<div id="score">Score: 0</div>
+    <div class="items">
+  		<div class="item" id="timer">Time: 120</div>
+  		<div class="item" id="score">Score: 0</div>
+      <div class="item" id="life">Life: 1000</div>
+      <div class="item" id="highScore">High Score: 0</div>
+    </div>
 	</div>
 </html>
