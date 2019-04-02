@@ -21,17 +21,24 @@ var PLAYERSPEED = 800.0;
 
 var score = 0,
 timer = 0,
-time = 120,
+time = 60,
 life = 0;
 
 var objLoader = null,
 mtlLoader = null;
+// enemy loader
+var enemyObjLoader = null,
+enemyMtlLoader = null;
 
 var rock = null;
 var cactus = null;
 var rocks = [];
 var cactusContainer = [];
-var currentTime = Date.now();
+var klingon = null;
+var klingons = [];
+var nowTime = null;
+var nowTimeKlingon = null;
+var currentTime = null;
 var clock = null;
 var bullets = [];
 var bulletCollider = null;
@@ -49,8 +56,10 @@ var SHADOW_MAP_WIDTH = 2048, SHADOW_MAP_HEIGHT = 2048;
 function startGame() {
     if (!isGameRunning) {
         score = 0;
-        life = 1000;
+        life = 100;
         isGameRunning = true;
+        nowTime = 0;
+        nowTimeKlingon = 0;
     }
 }
 
@@ -76,19 +85,28 @@ function floorAnimation() {
 
 function animate() {
     if (isGameRunning) {
-        var now = Date.now();
-        var deltat = now - currentTime;
-        currentTime = now;
-        timer = parseInt(time - clock.elapsedTime);
-        console.log(timer);
+        currentTime = clock.elapsedTime;
+        console.log('currentTime', currentTime);
+        console.log('nowTime', nowTime);
+
+        // time to show
+        timer = parseInt(time - currentTime);
+
+        // Update Animation
         KF.update();
 
+        // Space ship Collider
         spaceShipCollider = new THREE.Box3().setFromObject(spaceShip);
 
-        if(timer > 100 && timer < 120 ||
-            timer > 60 && timer < 80 ||
-            timer > 20 && timer < 40) {
+        //
+        if (currentTime - nowTime > 1) {
           cloneCactus();
+          nowTime = currentTime;
+        }
+
+        if (currentTime - nowTimeKlingon > 4) {
+          cloneKlingon();
+          nowTimeKlingon = currentTime;
         }
 
         // Get the change in time between frames
@@ -112,7 +130,18 @@ function animate() {
             }
           }
         }
+
+        if (klingons) {
+          for (klingon_i of klingons){
+            klingon_i.position.z += 4;
+            if (klingon_i.position.z >= 100){
+                scene.remove(klingon_i);
+            }
+          }
+        }
+
         updateTimer();
+        checkSpaceShip();
         collisionDetected();
     }
 }
@@ -194,7 +223,9 @@ function createScene(canvas) {
 
     // Create obstacles
     loadCactus();
-    //loadCactus();
+
+    // Create enemy
+    loadSpaceShipKlingon();
 
     // Create a group to hold the objects
     group = new THREE.Object3D;
@@ -233,6 +264,45 @@ function loadSpaceShip() {
                     spaceShip.rotation.z = -Math.PI/2;
                     spaceShip.rotation.y = -Math.PI;
                     group.add(spaceShip);
+                },
+                // called when is loading
+                function ( xhr ) {
+                    console.log( ( xhr.loaded / xhr.total * 100 ) + '% loaded' );
+                },
+                // called when loading has errors
+                function ( error ) {
+                    console.log( 'An error happened' );
+                });
+        }
+    )
+}
+
+function loadSpaceShipKlingon() {
+    if(!enemyMtlLoader) {
+        enemyMtlLoader = new THREE.MTLLoader();
+    }
+    enemyMtlLoader.load(
+        'models/klingon/neghvar.mtl',
+        function(materials){
+            materials.preload();
+            if(!enemyObjLoader) {
+                enemyObjLoader = new THREE.OBJLoader();
+                enemyObjLoader.setMaterials(materials);
+            }
+            enemyObjLoader.load(
+                'models/klingon/neghvar.obj',
+                function(object) {
+                    object.traverse( function ( child ) {
+                        if ( child instanceof THREE.Mesh ) {
+                            child.castShadow = true;
+                            child.receiveShadow = true;
+                        }
+                    });
+
+                    klingon = object;
+                    klingon.scale.set(1.5, 1.5, 1.5);
+                    klingon.position.set(0, 0, 0);
+                    klingon.rotation.y = Math.PI;
                 },
                 // called when is loading
                 function ( xhr ) {
@@ -333,11 +403,21 @@ function loadRock() {
 function cloneCactus() {
   var newCactus = cactus.clone();
   newCactus.position.set(
-    Math.random() * (200 - (-200)) + (-200),
+    Math.random() * (50 - (-50)) + (-50),
     10,
     -Math.random() * (300 - (-100)) + (-100));
   scene.add(newCactus);
   cactusContainer.push(newCactus);
+}
+
+function cloneKlingon() {
+  var newKlingon = klingon.clone();
+  newKlingon.position.set(
+    Math.random() * (50 - (-50)) + (-50),
+    Math.random() * (50 - 10) + (10),
+    -Math.random() * (200 - (-100)) + (-100));
+  scene.add(newKlingon);
+  klingons.push(newKlingon);
 }
 
 function listenForPlayerMovement() {
@@ -448,34 +528,49 @@ function createBullet(delta) {
 
 function collisionDetected() {
   // Detect cactus
-  if (spaceShipCollider && cactusContainer){
+  if (spaceShipCollider && cactusContainer) {
       for (var index=0; index<cactusContainer.length; index++) {
-        var t = new THREE.Box3().setFromObject(cactusContainer[index])
-        if (spaceShipCollider.intersectsBox(t)){
-            cactusDetected()
+        var item = new THREE.Box3().setFromObject(cactusContainer[index]);
+        if (spaceShipCollider.intersectsBox(item)) {
+            cactusCollisionDetected();
+        }
+      }
+  }
+
+  // Detect cactus
+  if (spaceShipCollider && klingons) {
+      for (var index=0; index<klingons.length; index++) {
+        var item = new THREE.Box3().setFromObject(klingons[index]);
+        if (spaceShipCollider.intersectsBox(item)) {
+            klingonCollisionDetected();
         }
       }
   }
 
   // Detect bullet collision
-  if (bulletCollider && cactusContainer){
-    for (var index=0; index<cactusContainer.length; index++) {
-      var item = new THREE.Box3().setFromObject(cactusContainer[index])
-      if (spaceShipCollider.intersectsBox(item)){
-          cactusDeleted();
-          scene.remove(cactusContainer[index]);
+  if (bulletCollider && klingons) {
+    for (var index=0; index<klingons.length; index++) {
+      var item = new THREE.Box3().setFromObject(klingons[index]);
+      if (spaceShipCollider.intersectsBox(item)) {
+          klingonDeleted();
+          scene.remove(klingons[index]);
       }
     }
   }
 
 }
 
-function cactusDetected() {
+function cactusCollisionDetected() {
   life -= 1;
   $("#life").text("Life: " +life);
 }
 
-function cactusDeleted() {
+function klingonCollisionDetected() {
+  life -= 5;
+  $("#life").text("Life: " +life);
+}
+
+function klingonDeleted() {
   score += 1;
   $("#score").text("Score: " +score);
 }
@@ -484,7 +579,19 @@ function updateTimer() {
   if (timer <= 0) {
     lose();
   }
+  if (timer < 10) {
+    $("#timer").css({"color": "#ff0000", "font-size": "1.5rem"});
+  }
   $("#timer").text("Time: " +timer);
+}
+
+function checkSpaceShip() {
+  if (life <= 0) {
+    lose();
+  }
+  if (life < 10) {
+    $("#life").css({"color": "#ff0000", "font-size": "1.5rem"});
+  }
 }
 
 function lose() {
