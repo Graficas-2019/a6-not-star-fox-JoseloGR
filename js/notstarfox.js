@@ -1,8 +1,8 @@
-var isGameRunning = false, 
+var isGameRunning = false,
 score = 0;
 
-var renderer = null, 
-scene = null, 
+var renderer = null,
+scene = null,
 camera = null,
 root = null,
 spaceShip = null,
@@ -24,6 +24,7 @@ mtlLoader = null;
 var robots = [];
 var currentTime = Date.now();
 var clock = null;
+var bullets = [];
 
 var animator = null,
 durationAnimation = 2, // sec
@@ -56,12 +57,22 @@ function animate() {
         // Get the change in time between frames
         var delta = clock.getDelta();
         animatePlayer(delta);
+
+
+        for (var index=0; index<bullets.length; index++) {
+          if (bullets[index] === undefined ) continue;
+          if (bullets[index].alive == false) {
+            bullets.splice(index, 1);
+            continue;
+          }
+          bullets[index].position.add(bullets[index].velocity);
+        }
     }
 }
 
 function run() {
     requestAnimationFrame(function() { run(); });
-    
+
     // Render the scene
     renderer.render( scene, camera );
 
@@ -73,6 +84,7 @@ function createScene(canvas) {
 
     clock = new THREE.Clock();
     listenForPlayerMovement();
+    listenForShot();
 
     // Create the Three.js renderer and attach it to our canvas
     renderer = new THREE.WebGLRenderer( { canvas: canvas, antialias: true } );
@@ -92,10 +104,10 @@ function createScene(canvas) {
     camera = new THREE.PerspectiveCamera( 45, canvas.width / canvas.height, 1, 4000 );
     camera.position.set(0, 30, 100);
     scene.add(camera);
-        
+
     // Create a group to hold all the objects
     root = new THREE.Object3D;
-    
+
     spotLight = new THREE.SpotLight (0xffffff);
     spotLight.position.set(0, 20, -10);
     spotLight.target.position.set(0, 30, 90);
@@ -110,7 +122,7 @@ function createScene(canvas) {
 
     ambientLight = new THREE.AmbientLight ( 0x888888 );
     root.add(ambientLight);
-    
+
     // Create the objects
     loadObj();
 
@@ -131,7 +143,7 @@ function createScene(canvas) {
 
     mesh.rotation.x = -Math.PI / 2;
     mesh.position.y = -4.02;
-    
+
     // Add the mesh to our group
     group.add( mesh );
     mesh.castShadow = false;
@@ -139,7 +151,7 @@ function createScene(canvas) {
 
     // Now add the group to our scene
     scene.add( root );
-    
+
 }
 
 function loadObj() {
@@ -163,7 +175,7 @@ function loadObj() {
                             child.receiveShadow = true;
                         }
                     });
-                            
+
                     spaceShip = object;
                     spaceShip.scale.set(2.5, 2.5, 2.5);
                     spaceShip.position.set(0, 25, 70);
@@ -179,8 +191,8 @@ function loadObj() {
                 function ( error ) {
                     console.log( 'An error happened' );
                 });
-        } 
-    )   
+        }
+    )
 }
 
 function listenForPlayerMovement() {
@@ -229,16 +241,16 @@ function animatePlayer(delta) {
     // Gradual slowdown
     playerVelocity.x -= playerVelocity.x * 10.0 * delta;
     playerVelocity.y -= playerVelocity.y * 10.0 * delta;
-  
+
     if (moveUp) {
       playerVelocity.x -= PLAYERSPEED * delta;
-    } 
+    }
     if (moveDown) {
       playerVelocity.x += PLAYERSPEED * delta;
-    } 
+    }
     if (moveLeft) {
       playerVelocity.y += PLAYERSPEED * delta;
-    } 
+    }
     if (moveRight) {
       playerVelocity.y -= PLAYERSPEED * delta;
     }
@@ -249,4 +261,41 @@ function animatePlayer(delta) {
     }
     spaceShip.translateX(playerVelocity.x * delta);
     spaceShip.translateY(playerVelocity.y * delta);
+}
+
+function listenForShot(delta) {
+    // A key has been pressed
+    var onKeyDown = function(event) {
+      switch (event.keyCode) {
+          case 32: // spacebar
+            createBullet();
+            break;
+      }
+    };
+    // Add event listeners for when movement keys are pressed and released
+    document.addEventListener('keydown', onKeyDown, false);
+}
+
+function createBullet() {
+  var bullet = new THREE.Mesh(
+    new THREE.SphereGeometry(0.2, 8, 8),
+    new THREE.MeshBasicMaterial({color: 0xffffff})
+  )
+  bullet.position.set(
+    spaceShip.position.x,
+    spaceShip.position.y,
+    spaceShip.position.z
+  )
+  bullet.velocity = new THREE.Vector3(
+    Math.sin(spaceShip.position.y),
+    0,
+    Math.cos(spaceShip.position.y)
+  );
+  bullet.alive = true;
+  setTimeout(() => {
+    bullet.alive = false;
+    scene.remove(bullet);
+  }, 1000);
+  bullets.push(bullet);
+  scene.add(bullet);
 }
