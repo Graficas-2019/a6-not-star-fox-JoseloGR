@@ -27,3 +27,5 @@ The game must have the following:
 - UI was correctly displayed.
 
 **Deadline:** 29/03/2019
+
+**Grade: 100**
